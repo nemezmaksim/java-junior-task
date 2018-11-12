@@ -5,12 +5,14 @@ import com.mcb.javajuniortask.model.Client;
 import com.mcb.javajuniortask.model.Debt;
 import com.mcb.javajuniortask.repository.ClientRepository;
 
+import com.mcb.javajuniortask.repository.DebtRepository;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellOption;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -28,6 +30,7 @@ public class ClientService {
     public Iterable<ClientDTO> showAllClients() {
         return StreamSupport.stream(clientRepository.findAll().spliterator(), false).map(client -> {
             ClientDTO clientDTO = new ClientDTO();
+            clientDTO.setId(client.getId()); // добавил, чтобы отображался id
             clientDTO.setName(client.getName());
             clientDTO.setTotalDebt(client.getDebts().stream().map(Debt::getValue).reduce(BigDecimal::add).orElse(BigDecimal.ZERO));
             return clientDTO;
@@ -47,7 +50,9 @@ public class ClientService {
     @ShellMethod("Adds debt to client")
     @Transactional
     public UUID addDebtToClient(@ShellOption UUID clientId, @ShellOption BigDecimal value) {
-        Client client = clientRepository.findOne(clientId);
+        Client client = Optional.ofNullable(clientRepository
+                .findOne(clientId))
+                .orElseThrow(() -> new RuntimeException("clientId not found"));
         Debt debt = new Debt();
         debt.setValue(value);
         debt.setId(UUID.randomUUID());
